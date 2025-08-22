@@ -39,6 +39,7 @@ def custom_euler_odeint(func, y0, t_span):
     
     for i in range(len(t_span) - 1):
         t = t_span[i]
+        print(f"t: {t}")
         dt = (t_span[i + 1] - t_span[i]).mean()
         dphi_dt = func(t, x)
         x = x + dt * dphi_dt
@@ -55,6 +56,7 @@ def mf_custom_euler_odeint(func, y0, t_span):
     for i in range(len(t_span) - 1):
         r = t_span[i]
         t = t_span[i + 1]
+        print(f"r: {r}, t: {t}")
         dt = (t - r).mean()
         u_flow = func(r=r, t=t, x=x)
         x = x + dt * u_flow

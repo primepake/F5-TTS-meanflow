@@ -32,6 +32,7 @@ def print_gpu_utilization(device_id):
 
 def remap_time_embed_weights(state_dict):
     """Remap single time_embed to dual t_time_embed and r_time_embed"""
+    print('remapping time_embed weights')
     keys_to_remap = []
     
     # Find all time_embed keys
@@ -241,8 +242,11 @@ class Trainer:
             return 0
 
         self.accelerator.wait_for_everyone()
+        is_last_model = False
         if "model_last.pt" in os.listdir(self.checkpoint_path):
             latest_checkpoint = "model_last.pt"
+            is_last_model = True
+
         else:
             # Updated to consider pretrained models for loading but prioritize training checkpoints
             all_checkpoints = [
@@ -277,10 +281,10 @@ class Trainer:
         for key in ["ema_model.mel_spec.mel_stft.mel_scale.fb", "ema_model.mel_spec.mel_stft.spectrogram.window"]:
             if key in checkpoint["ema_model_state_dict"]:
                 del checkpoint["ema_model_state_dict"][key]
-
-        # checkpoint["ema_model_state_dict"] = remap_time_embed_weights(
-        #         checkpoint["ema_model_state_dict"]
-        # )
+        if not is_last_model:
+            checkpoint["ema_model_state_dict"] = remap_time_embed_weights(
+                    checkpoint["ema_model_state_dict"]
+            )
         if self.is_main:
             self.ema_model.load_state_dict(checkpoint["ema_model_state_dict"], strict=False)
 
@@ -296,15 +300,15 @@ class Trainer:
             for key in ["mel_spec.mel_stft.mel_scale.fb", "mel_spec.mel_stft.spectrogram.window"]:
                 if key in checkpoint["model_state_dict"]:
                     del checkpoint["model_state_dict"][key]
-
-            # checkpoint["model_state_dict"] = remap_time_embed_weights(
-            #     checkpoint["model_state_dict"]
-            # )
+            if not is_last_model:
+                checkpoint["model_state_dict"] = remap_time_embed_weights(
+                    checkpoint["model_state_dict"]
+                )
 
             self.accelerator.unwrap_model(self.model).load_state_dict(checkpoint["model_state_dict"], strict=False)
-            # self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-            # if self.scheduler:
-            #     self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+            self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            if self.scheduler:
+                self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
             update = checkpoint["update"]
             print('F5-TTS INFO: Successfully Loading from pretrained model')
         else:
@@ -435,7 +439,8 @@ class Trainer:
                         self.accelerator.backward(loss)
 
                         if self.max_grad_norm > 0 and self.accelerator.sync_gradients:
-                            self.accelerator.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+                            norm = self.accelerator.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+                            print(f"Gradient norm: {norm}")
 
                         self.optimizer.step()
                         self.scheduler.step()
@@ -451,6 +456,7 @@ class Trainer:
 
                     if self.accelerator.is_local_main_process:
                         self.experiment.log_metric("loss", loss.item(), step=global_update)
+                        self.experiment.log_metric("norm", norm, step=global_update)
                         self.experiment.log_metric("lr", self.scheduler.get_last_lr()[0], step=global_update)
 
                         if self.logger == "tensorboard":
@@ -496,12 +502,14 @@ class Trainer:
                             if self.logger == "comet" and self.experiment:
                                 self.experiment.log_audio(
                                     gen_audio_path, 
-                                    name=f"generated_audio_update_{global_update}",
+                                    file_name=f"generated_audio_update_{global_update}",
+                                    sample_rate=target_sample_rate,
                                     step=global_update
                                 )
                                 self.experiment.log_audio(
                                     ref_audio_path, 
-                                    name=f"reference_audio_update_{global_update}",
+                                    file_name=f"reference_audio_update_{global_update}",
+                                    sample_rate=target_sample_rate,
                                     step=global_update
                                 )
 

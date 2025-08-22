@@ -391,8 +391,10 @@ class MFDiT(nn.Module):
         batch, seq_len = x.shape[0], x.shape[1]
         if t.ndim == 0:
             t = t.repeat(batch)
+            r = r.repeat(batch)
 
         # t: conditioning time, text: text, x: noised audio + cond audio + text
+        # print(f"before t: {t}, r: {r}")
         t = self.t_time_embed(t)
         r = self.r_time_embed(r)
         

@@ -48,13 +48,12 @@ def cosine_annealing(start, end, step, total_steps):
     return end + 0.5 * (start - end) * (1 + math.cos(cos_inner))
 
 
-## partially from https://github.com/haidog-yaqub/MeanFlow
-class MeanFlow():
+class MeanFlow:
     def __init__(
         self, 
         steps=1,  
         flow_ratio=0.75,
-        time_dist=['lognorm', -0.4, 1.0],
+        time_dist=['uniform', -0.4, 1.0],
         w=2.0,
         k=0.9,
         cfg_uncond='u',
@@ -85,13 +84,11 @@ class MeanFlow():
         elif self.time_dist[0] == 'lognorm':
             mu, sigma = self.time_dist[-2], self.time_dist[-1]
             normal_samples = np.random.randn(batch_size, 2).astype(np.float32) * sigma + mu
-            samples = 1 / (1 + np.exp(-normal_samples))  
+            samples = 1 / (1 + np.exp(-normal_samples)) 
 
         t_np = np.maximum(samples[:, 0], samples[:, 1])
         r_np = np.minimum(samples[:, 0], samples[:, 1])
 
-        # we don't use self.flow ratio if we use scheduler
-        # !TODO: implement flow ratio scheduler
         num_selected = int(self.flow_ratio * batch_size)  
         indices = np.random.permutation(batch_size)[:num_selected]
         r_np[indices] = t_np[indices]
