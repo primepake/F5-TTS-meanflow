@@ -138,12 +138,13 @@ class MeanFlow:
         if self.w is not None:
             uncond =  torch.zeros_like(cond)
             uncond_text = torch.zeros_like(text)
-            u_t = fn(x=x_t,
-                     cond=uncond,
-                     text=uncond_text, 
-                     r=t,
-                     t=t,
-                     mask=mask).detach().requires_grad_(False)
+            with torch.no_grad():
+                u_t = fn(x=x_t,
+                        cond=uncond,
+                        text=uncond_text, 
+                        r=t,
+                        t=t,
+                        mask=mask)
         
             v_hat = self.w * flow + (1 - self.w) * u_t
         else:
@@ -161,7 +162,7 @@ class MeanFlow:
             u, dudt = self.jvp_fn(*jvp_args)
 
         u_tgt = v_hat - (t_ - r_) * dudt
-        error = u - stopgrad(u_tgt)
+        error = u[rand_span_mask] - stopgrad(u_tgt[rand_span_mask])
         loss = adaptive_l2_loss(error)
-        loss = loss * rand_span_mask.unsqueeze(-1)
+        # loss = loss * rand_span_mask.unsqueeze(-1)
         return loss, u

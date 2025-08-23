@@ -518,8 +518,8 @@ class Trainer:
                     if global_update % 100 == 0:
                         torch.cuda.empty_cache()
                         gc.collect()
-                    print(f"F5-TTS trained ok with shape {mel_lengths.shape} and {mel_spec.shape}")
-                    print(f"device {self.accelerator.device.index} is using {print_gpu_utilization(self.accelerator.device.index)}")
+                    # print(f"F5-TTS trained ok with shape {mel_lengths.shape} and {mel_spec.shape}")
+                    # print(f"device {self.accelerator.device.index} is using {print_gpu_utilization(self.accelerator.device.index)}")
                     del text_inputs, mel_spec, mel_lengths
                     
             except Exception as e:

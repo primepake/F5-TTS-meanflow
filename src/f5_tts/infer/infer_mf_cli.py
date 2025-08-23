@@ -278,11 +278,11 @@ if model != "F5TTS_Base":
 # override for previous models
 model = "F5TTS_Base_MF"
 
-ckpt_file = '/data/F5-TTS/ckpts/emilia/model_last.pt'
+ckpt_file = '/data/F5-TTS/ckpts/emilia/model_22000.pt'
 
 print(f"Using {model}...")
 ema_model = load_model(
-    model_cls, model_arc, ckpt_file, mel_spec_type=vocoder_name, vocab_file=vocab_file, device=device
+    model_cls, model_arc, ckpt_file, mel_spec_type=vocoder_name, vocab_file=vocab_file, device=device, use_ema=False
 )
 
 
